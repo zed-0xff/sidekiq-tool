@@ -6,7 +6,7 @@ require "optparse"
 require "redis"
 
 @options = {
-  url: ENV["REDIS_URL"],
+  url: ENV.fetch("REDIS_URL", nil),
   range: "0..-1",
   jid: [],
   job_class: [],
