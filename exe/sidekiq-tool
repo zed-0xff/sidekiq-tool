@@ -1,11 +1,12 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
-require 'json'
-require 'optparse'
-require 'redis'
+
+require "json"
+require "optparse"
+require "redis"
 
 @options = {
-  url: ENV['REDIS_URL'],
+  url: ENV["REDIS_URL"],
   range: "0..-1",
   jid: [],
   job_class: [],
@@ -14,7 +15,7 @@ require 'redis'
 @commands = []
 
 optparse = OptionParser.new do |opts|
-  opts.banner = "Usage: #{File.basename($0)} [options]"
+  opts.banner = "Usage: #{File.basename($PROGRAM_NAME)} [options]"
 
   opts.on("-u URL", "Redis URL (default: from REDIS_URL env var)") do |v|
     @options[:url] = v
@@ -36,7 +37,7 @@ optparse = OptionParser.new do |opts|
 
   opts.separator("")
 
-  opts.on("-l", "--list", "list queues (default)") do |v|
+  opts.on("-l", "--list", "list queues (default)") do
     @commands << [:list]
   end
 
@@ -46,13 +47,13 @@ optparse = OptionParser.new do |opts|
             @commands << [:show, v || "0..-1"]
           end
 
-  opts.on("-S", "--schedule", "show scheduled jobs (respects queue parameter)") do |v|
+  opts.on("-S", "--schedule", "show scheduled jobs (respects queue parameter)") do
     @commands << [:schedule]
   end
-  opts.on("-P", "--processes", "show processes (respects queue parameter)") do |v|
+  opts.on("-P", "--processes", "show processes (respects queue parameter)") do
     @commands << [:processes]
   end
-  opts.on("-R", "--running-jobs", "show currently running jobs (respects queue/jid/job-class)") do |v|
+  opts.on("-R", "--running-jobs", "show currently running jobs (respects queue/jid/job-class)") do
     @commands << [:jobs]
   end
 
@@ -73,38 +74,37 @@ optparse = OptionParser.new do |opts|
 
   opts.on("--delete-jobs [N]", Integer,
           "N limits number of jobs to delete, 0 (default) = delete all",
-          "respects --job-id and --job-class parameters"
-         ) do |v|
+          "respects --job-id and --job-class parameters") do |v|
     @commands << [:delete_jobs, v]
   end
   opts.on("--export-jobs [N]", Integer, "same as delete, but job data is written to STDOUT beforehead") do |v|
     @commands << [:export_jobs, v]
   end
-  opts.on("--delete-queue", "deletes ALL jobs from queue") do |v|
+  opts.on("--delete-queue", "deletes ALL jobs from queue") do
     @commands << [:delete_queue]
   end
 
   opts.separator("")
 
-  opts.on("--confirm-delete-jobs", "jobs will not be deleted without this option") do |v|
+  opts.on("--confirm-delete-jobs", "jobs will not be deleted without this option") do
     @options[:confirm_delete_jobs] = true
   end
-  opts.on("--confirm-export-jobs") do |v|
+  opts.on("--confirm-export-jobs") do
     @options[:confirm_export_jobs] = true
   end
-  opts.on("--confirm-queue-delete", "queue will not be deleted without this option") do |v|
+  opts.on("--confirm-queue-delete", "queue will not be deleted without this option") do
     @options[:confirm_queue_delete] = true
   end
 
   opts.separator("")
 
-  opts.on("-W", "--omit-weight", "Omit weight from schedule output (easier to parse)") do |v|
+  opts.on("-W", "--omit-weight", "Omit weight from schedule output (easier to parse)") do
     @options[:omit_weight] = true
   end
   opts.on("-v", "--[no-]verbose", "Run verbosely") do |v|
     @options[:verbose] = v
   end
-  opts.on("-k", "Bypass SSL verification (for debug/dev)") do |v|
+  opts.on("-k", "Bypass SSL verification (for debug/dev)") do
     @options[:ssl_params] = { verify_mode: OpenSSL::SSL::VERIFY_NONE }
   end
 end
@@ -127,36 +127,37 @@ end
 
 def list
   @redis.keys("queue:*").each do |key|
-    queue_name = key.sub(/^queue:/,'')
+    queue_name = key.sub(/^queue:/, "")
     puts queue_name
   end
 end
 
-def show range
+def show(range)
   range = range.split("..").map(&:to_i)
   puts @redis.lrange("queue:#{queue_name}", *range).join("\n")
 end
 
 def delete_queue
   unless @options[:confirm_queue_delete]
-    $stderr.puts "[!] cannot delete queue without confirmation"
+    warn "[!] cannot delete queue without confirmation"
     exit 1
   end
   @redis.del "queue:#{queue_name}"
 end
 
-def _process_jobs n
-  if @options[:jid].empty? && @options[:job_class].empty? && n.to_i == 0
-    $stderr.puts "[!] add N or --job-id or --job-class"
+def _process_jobs(n)
+  if @options[:jid].empty? && @options[:job_class].empty? && n.to_i.zero?
+    warn "[!] add N or --job-id or --job-class"
     exit 1
   end
   ndeleted = 0
-  n = Float::INFINITY if n.nil? || n == 0
+  n = Float::INFINITY if n.nil? || n.zero?
   # TODO: select in chunks
   @redis.lrange("queue:#{queue_name}", 0, -1).each do |jobdata|
     job = JSON.parse(jobdata)
-    next if @options[:jid].any? && !@options[:jid].include?(job['jid'])
-    next if @options[:job_class].any? && !@options[:job_class].include?(job['class'])
+    next if @options[:jid].any? && !@options[:jid].include?(job["jid"])
+    next if @options[:job_class].any? && !@options[:job_class].include?(job["class"])
+
     ndeleted += @redis.lrem("queue:#{queue_name}", 1, jobdata).to_i
     yield jobdata if block_given?
     break if ndeleted >= n
@@ -164,18 +165,18 @@ def _process_jobs n
   ndeleted
 end
 
-def delete_jobs n
+def delete_jobs(n)
   unless @options[:confirm_delete_jobs]
-    $stderr.puts "[!] cannot delete jobs without confirmation"
+    warn "[!] cannot delete jobs without confirmation"
     exit 1
   end
   ndeleted = _process_jobs(n)
   puts "[=] deleted #{ndeleted} jobs"
 end
 
-def export_jobs n
+def export_jobs(n)
   unless @options[:confirm_export_jobs]
-    $stderr.puts "[!] cannot export jobs without confirmation"
+    warn "[!] cannot export jobs without confirmation"
     exit 1
   end
   _process_jobs(n) do |jobdata|
@@ -185,16 +186,17 @@ end
 
 def import_jobs
   n = 0
-  while jobdata = gets
+  while (jobdata = gets)
     jobdata.strip!
-    raise "invalid job format: #{jobdata.inspect}" unless jobdata=~ /^\{.+\}$/
+    raise "invalid job format: #{jobdata.inspect}" unless jobdata =~ /^\{.+\}$/
+
     @redis.rpush("queue:#{queue_name}", jobdata)
     n += 1
   end
   puts "[=] imported #{n} jobs"
 end
 
-def move_jobs n
+def move_jobs(n)
   nmoved = _process_jobs(n) do |jobdata|
     puts jobdata if @options[:verbose]
     @redis.rpush("queue:#{dst_queue_name}", jobdata)
@@ -205,20 +207,18 @@ end
 # can optionally accept queue/job_class/jid
 def schedule
   match = []
-  if @options[:queue]
-    match << %Q|"queue":"#{@options[:queue]}"|
-  end
+  match << %("queue":"#{@options[:queue]}") if @options[:queue]
   if @options[:job_class].size == 1
-    match << %Q|"class":"#{@options[:job_class][0]}"|
+    match << %("class":"#{@options[:job_class][0]}")
   elsif @options[:job_class].size > 1
     raise "multiple job classes filter TBD"
   end
   if @options[:jid].size == 1
-    match << %Q|"jid":"#{@options[:jid][0]}"|
+    match << %("jid":"#{@options[:jid][0]}")
   elsif @options[:jid].size > 1
     raise "multiple job ids filter TBD"
   end
-  match = match.any? ? ("*"+match.join("*")+"*") : nil
+  match = match.any? ? "*#{match.join("*")}*" : nil
   @redis.zscan_each("schedule", count: 1000, match: match).each do |sdata, weight|
     if @options[:omit_weight]
       puts sdata
@@ -232,12 +232,12 @@ end
 def processes
   @redis.smembers("processes").each do |pid|
     r = @redis.hgetall pid
-    r['info'] = JSON.parse(r['info'])
+    r["info"] = JSON.parse(r["info"])
     if @options[:queue]
-      queues = r.dig('info', 'queues')
-      next unless queues && queues.include?(@options[:queue])
+      queues = r.dig("info", "queues")
+      next unless queues&.include?(@options[:queue])
     end
-    r['workers'] = @redis.hgetall("#{pid}:workers")&.transform_values{ |x| JSON.parse(x) }
+    r["workers"] = @redis.hgetall("#{pid}:workers")&.transform_values { |x| JSON.parse(x) }
     puts r.to_json
     $stdout.flush # makes grepping faster
   end
@@ -248,12 +248,14 @@ def jobs
   @redis.smembers("processes").each do |pid|
     workers = @redis.hgetall("#{pid}:workers")
     next unless workers
-    workers.values.each do |wdata|
+
+    workers.each_value do |wdata|
       wdata = JSON.parse(wdata)
-      payload = JSON.parse(wdata['payload'])
-      next if @options[:queue] && payload['queue'] != @options[:queue]
-      next if @options[:jid].any? && !@options[:jid].include?(payload['jid'])
-      next if @options[:job_class].any? && !@options[:job_class].include?(payload['class'])
+      payload = JSON.parse(wdata["payload"])
+      next if @options[:queue] && payload["queue"] != @options[:queue]
+      next if @options[:jid].any? && !@options[:jid].include?(payload["jid"])
+      next if @options[:job_class].any? && !@options[:job_class].include?(payload["class"])
+
       puts payload.to_json
       $stdout.flush # makes grepping faster
     end
@@ -261,6 +263,5 @@ def jobs
 end
 
 @commands.each do |cmd|
-  send cmd[0], *cmd[1..-1]
+  send cmd[0], *cmd[1..]
 end
-
