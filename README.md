@@ -1,37 +1,36 @@
-# Sidekiq::Tool
+# sidekiq-tool
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/sidekiq/tool`. To experiment with that code, run `bin/console` for an interactive prompt.
+```
+Usage: sidekiq-tool [options]
+    -u URL                           Redis URL (default: from REDIS_URL env var)
+    -q, --queue QUEUE                apply next commands to specified queue
+        --jid JID                    (alias for --job-id)
+        --job-id JID                 (can be used multiple times)
+        --job-class CLASS            (can be used multiple times)
 
-TODO: Delete this and the text above, and describe your gem
+    -l, --list                       list queues (default)
+    -s, --show [RANGE]               show contents of queue
+                                     see https://redis.io/commands/lrange/
+    -S, --schedule                   show scheduled jobs (respects queue parameter)
+    -P, --processes                  show processes (respects queue parameter)
+    -R, --running-jobs               show currently running jobs (respects queue/jid/job-class)
 
-## Installation
+        --import-jobs                add jobs from STDIN into queue
+        --move-jobs [N]              atomically move jobs to another queue
+    -Q, --dst-queue QUEUE            destination queue
 
-Install the gem and add to the application's Gemfile by executing:
+Destructive commands: (require confirmations)
+        --delete-jobs [N]            N limits number of jobs to delete, 0 (default) = delete all
+                                     respects --job-id and --job-class parameters
+        --export-jobs [N]            same as delete, but job data is written to STDOUT beforehead
+        --delete-queue               deletes ALL jobs from queue
 
-    $ bundle add sidekiq-tool
+        --confirm-delete-jobs        jobs will not be deleted without this option
+        --confirm-export-jobs
+        --confirm-queue-delete       queue will not be deleted without this option
 
-If bundler is not being used to manage dependencies, install the gem by executing:
+    -W, --omit-weight                Omit weight from schedule output (easier to parse)
+    -v, --[no-]verbose               Run verbosely
+    -k                               Bypass SSL verification (for debug/dev)
 
-    $ gem install sidekiq-tool
-
-## Usage
-
-TODO: Write usage instructions here
-
-## Development
-
-After checking out the repo, run `bin/setup` to install dependencies. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
-
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
-
-## Contributing
-
-Bug reports and pull requests are welcome on GitHub at https://github.com/zed-0xff/sidekiq-tool. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/zed-0xff/sidekiq-tool/blob/master/CODE_OF_CONDUCT.md).
-
-## License
-
-The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
-
-## Code of Conduct
-
-Everyone interacting in the Sidekiq::Tool project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/zed-0xff/sidekiq-tool/blob/master/CODE_OF_CONDUCT.md).
+```
