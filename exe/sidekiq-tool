@@ -47,13 +47,16 @@ optparse = OptionParser.new do |opts|
             @commands << [:show, v || "0..-1"]
           end
 
-  opts.on("-S", "--schedule", "show scheduled jobs (respects queue parameter)") do
-    @commands << [:schedule]
-  end
   opts.on("-P", "--processes", "show processes (respects queue parameter)") do
     @commands << [:processes]
   end
-  opts.on("-R", "--running-jobs", "show currently running jobs (respects queue/jid/job-class)") do
+  opts.on("-R", "--retries", "show retries (respects queue parameter)") do
+    @commands << [:retries]
+  end
+  opts.on("-S", "--scheduled", "show scheduled jobs (respects queue parameter)") do
+    @commands << [:scheduled]
+  end
+  opts.on("-r", "--running-jobs", "show currently running jobs (respects queue/jid/job-class)") do
     @commands << [:jobs]
   end
 
@@ -98,7 +101,7 @@ optparse = OptionParser.new do |opts|
 
   opts.separator("")
 
-  opts.on("-W", "--omit-weight", "Omit weight from schedule output (easier to parse)") do
+  opts.on("-W", "--omit-weight", "Omit weight from schedule/retries output (easier to parse)") do
     @options[:omit_weight] = true
   end
   opts.on("-v", "--[no-]verbose", "Run verbosely") do |v|
@@ -205,7 +208,7 @@ def move_jobs(n)
 end
 
 # can optionally accept queue/job_class/jid
-def schedule
+def _zscan(zkey)
   match = []
   match << %("queue":"#{@options[:queue]}") if @options[:queue]
   if @options[:job_class].size == 1
@@ -219,13 +222,21 @@ def schedule
     raise "multiple job ids filter TBD"
   end
   match = match.any? ? "*#{match.join("*")}*" : nil
-  @redis.zscan_each("schedule", count: 1000, match: match).each do |sdata, weight|
+  @redis.zscan_each(zkey, count: 1000, match: match).each do |sdata, weight|
     if @options[:omit_weight]
       puts sdata
     else
       puts "[#{sdata}, #{weight}]"
     end
   end
+end
+
+def scheduled
+  _zscan("schedule")
+end
+
+def retries
+  _zscan("retry")
 end
 
 # slowest!
