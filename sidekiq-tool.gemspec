@@ -6,7 +6,7 @@ Gem::Specification.new do |spec|
   spec.name = "sidekiq-tool"
   spec.version = Sidekiq::Tool::VERSION
   spec.authors = ["Andrey \"Zed\" Zaikin"]
-  spec.email = ["andrey.zaikin@every-pay.com"]
+  spec.email = ["zed.0xff@gmail.com"]
 
   spec.summary = "swiss-army knife for tinkering with sidekiq guts"
   spec.homepage = "https://github.com/zed-0xff/sidekiq-tool"
