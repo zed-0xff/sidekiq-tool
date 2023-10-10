@@ -11,9 +11,10 @@ Usage: sidekiq-tool [options]
     -l, --list                       list queues (default)
     -s, --show [RANGE]               show contents of queue
                                      see https://redis.io/commands/lrange/
-    -S, --schedule                   show scheduled jobs (respects queue parameter)
     -P, --processes                  show processes (respects queue parameter)
-    -R, --running-jobs               show currently running jobs (respects queue/jid/job-class)
+    -R, --retries                    show retries (respects queue parameter)
+    -S, --scheduled                  show scheduled jobs (respects queue parameter)
+    -r, --running-jobs               show currently running jobs (respects queue/jid/job-class)
 
         --import-jobs                add jobs from STDIN into queue
         --move-jobs [N]              atomically move jobs to another queue
@@ -29,7 +30,7 @@ Destructive commands: (require confirmations)
         --confirm-export-jobs
         --confirm-queue-delete       queue will not be deleted without this option
 
-    -W, --omit-weight                Omit weight from schedule output (easier to parse)
+    -W, --omit-weight                Omit weight from schedule/retries output (easier to parse)
     -v, --[no-]verbose               Run verbosely
     -k                               Bypass SSL verification (for debug/dev)
 
